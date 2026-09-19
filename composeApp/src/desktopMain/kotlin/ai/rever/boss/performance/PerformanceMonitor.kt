@@ -23,8 +23,17 @@ import java.lang.management.MemoryMXBean
 import java.lang.management.MemoryPoolMXBean
 import java.lang.management.OperatingSystemMXBean
 import java.lang.management.ThreadMXBean
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+/**
+ * Timestamp used in export file names. `Locale.ROOT` keeps the ISO chronology and ASCII digits, so
+ * the name is identical on a Thai-Buddhist or Arabic-Indic machine and still sorts.
+ */
+internal fun exportTimestamp(time: LocalDateTime): String = EXPORT_TIMESTAMP_FORMAT.format(time)
+
+private val EXPORT_TIMESTAMP_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss", Locale.ROOT)
 
 /**
  * Global singleton for performance monitoring.
@@ -472,7 +481,7 @@ object PerformanceMonitor {
     suspend fun exportMetrics(): Result<String> =
         withContext(Dispatchers.IO) {
             try {
-                val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss").format(Date())
+                val timestamp = exportTimestamp(LocalDateTime.now())
                 val exportFile = BossDirectories.resolve("performance-export-$timestamp.json")
                 exportFile.parentFile?.mkdirs()
 
