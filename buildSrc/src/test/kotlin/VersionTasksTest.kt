@@ -1,9 +1,11 @@
+import java.io.File
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.Locale
 import java.util.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class VersionTasksTest {
@@ -38,5 +40,17 @@ class VersionTasksTest {
         } finally {
             TimeZone.setDefault(original)
         }
+    }
+
+    // The tests above cover the helper, not its call sites. A call site that went back to
+    // SimpleDateFormat would bring the locale bug back without failing them, so check the source.
+    @Test
+    fun `no call site formats the build date with SimpleDateFormat`() {
+        // Gradle runs buildSrc's tests from the buildSrc directory.
+        val source = File("src/main/kotlin/VersionTasks.kt")
+        assertTrue(source.isFile, "expected to run from buildSrc: ${source.absolutePath}")
+        // A use, not a mention: isoBuildDate's KDoc names SimpleDateFormat to explain the old bug.
+        val use = Regex("""SimpleDateFormat\s*\(|import\s+java\.text\.(SimpleDateFormat|\*)""")
+        assertFalse(use.containsMatchIn(source.readText()), "VersionTasks.kt uses SimpleDateFormat again; use isoBuildDate()")
     }
 }
