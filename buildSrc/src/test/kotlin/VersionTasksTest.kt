@@ -1,7 +1,10 @@
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.Locale
+import java.util.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class VersionTasksTest {
     @Test
@@ -11,10 +14,29 @@ class VersionTasksTest {
         try {
             for (tag in listOf("en-US", "th-TH-u-ca-buddhist", "ja-JP-u-ca-japanese", "ar-EG", "fa-IR")) {
                 Locale.setDefault(Locale.forLanguageTag(tag))
-                assertEquals("2026-09-19", buildDate(date), "locale $tag changed app.build.date")
+                assertEquals("2026-09-19", isoBuildDate(date), "locale $tag changed app.build.date")
             }
         } finally {
             Locale.setDefault(original)
+        }
+    }
+
+    @Test
+    fun `build date is the UTC day whatever the default time zone`() {
+        val original = TimeZone.getDefault()
+        try {
+            // UTC+14 and UTC-12 are a full day apart for most of every day, so a local-zone read
+            // disagrees with UTC under at least one of them.
+            for (zone in listOf("Pacific/Kiritimati", "Etc/GMT+12")) {
+                TimeZone.setDefault(TimeZone.getTimeZone(zone))
+                val before = isoBuildDate(LocalDate.now(ZoneOffset.UTC))
+                val written = isoBuildDate()
+                val after = isoBuildDate(LocalDate.now(ZoneOffset.UTC))
+                // Bracketed so a run that crosses UTC midnight cannot fail spuriously.
+                assertTrue(written == before || written == after, "zone $zone wrote $written, UTC day is $before")
+            }
+        } finally {
+            TimeZone.setDefault(original)
         }
     }
 }
