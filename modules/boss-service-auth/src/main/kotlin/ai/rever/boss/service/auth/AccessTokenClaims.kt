@@ -31,9 +31,16 @@ internal data class AccessTokenClaims(
 /**
  * Reads [AccessTokenClaims] from [accessToken], or null when the token cannot be read.
  *
- * Fails closed: `is_admin` counts only as a strict boolean, as in the host, and `user_permissions`
- * keeps only its string entries. A missing claim grants nothing. The signature is not checked
- * here, as it is not in the host: the token is the one Supabase just returned to this process.
+ * Fails closed: `is_admin` counts only when it reads as `true` - a JSON boolean, or the string
+ * `"true"`, which the host's `RoleService` accepts too; the hook writes a real boolean. Anything
+ * else (`"yes"`, `1`) is not an admin, and a non-primitive `is_admin` makes the whole token
+ * unreadable. `user_permissions` keeps only its string entries. A missing claim grants nothing.
+ *
+ * The signature is not checked here, as it is not in the host. After a sign-in the token is the
+ * one Supabase just returned to this process; on a restored session it comes from supabase-kt's
+ * local session store, unverified and without an `exp` check. That store is only writable by the
+ * account this service already runs as, and real authority stays with server-side RLS, which
+ * checks the genuine JWT - so do not treat these claims as verified beyond that.
  */
 internal fun accessTokenClaims(accessToken: String): AccessTokenClaims? =
     try {

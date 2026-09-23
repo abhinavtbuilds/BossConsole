@@ -41,9 +41,17 @@ class AccessTokenClaimsTest {
     }
 
     @Test
-    fun `anything but a strict boolean is not an admin`() {
+    fun `only a value reading as true is an admin`() {
         assertEquals(false, accessTokenClaims(token("""{"is_admin":"yes"}"""))?.isAdmin)
         assertEquals(false, accessTokenClaims(token("""{"is_admin":1}"""))?.isAdmin)
+        // The string "true" counts, as in the host's RoleService; the hook itself writes a boolean.
+        assertEquals(true, accessTokenClaims(token("""{"is_admin":"true"}"""))?.isAdmin)
+    }
+
+    @Test
+    fun `a non-primitive is_admin makes the whole token unreadable, permissions included`() {
+        assertNull(accessTokenClaims(token("""{"is_admin":{"value":true},"user_permissions":["role.read"]}""")))
+        assertNull(accessTokenClaims(token("""{"is_admin":[true],"user_permissions":["role.read"]}""")))
     }
 
     @Test
